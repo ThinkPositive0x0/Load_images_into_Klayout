@@ -1,5 +1,5 @@
-# Import_images_into_Klayout
-Import optical or SEM images into Klayout gds files.
+# Load_images_into_Klayout
+Load optical or SEM images into Klayout gds files.
 
 ## 0. Install the necessary python packages
 
