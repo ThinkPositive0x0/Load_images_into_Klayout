@@ -1,0 +1,130 @@
+<?xml version="0.1" encoding="utf-8"?>
+<klayout-macro>
+ <description>Load the image with the precomputed matrix into the gds file.</description>
+ <version>0.1</version>
+ <category>pymacros</category>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>true</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>python</interpreter>
+ <dsl-interpreter-name/>
+ <text># -*- coding: utf-8 -*-
+# @Author: ThinkPositive0x0
+# @Email: ThinkPositive0x0@gmail.com
+# @Date:   2021-01-22 19:28:54
+# @Last Modified by:   ThinkPositive0x0
+# @Last Modified time: 2021-05-05 20:39:04
+
+import json
+import pya
+import re
+
+
+class ImageToLayout(pya.QDialog):
+    def __init__(self, parent = None):
+        super(ImageToLayout, self).__init__()
+        self.setWindowTitle("Load Image Matrix")
+        
+        
+        self.window_width = 600
+        self.window_height = 400 
+        
+        self.resize(self.window_width, self.window_height)
+        
+        self.layout = pya.QGridLayout(self)
+        
+        self.input_text = pya.QLineEdit(self)
+        self.input_text.setAcceptDrops(True)
+        self.input_text.setFont(pya.QFont('Times', 15))
+        
+        self.input_text.setText("select matrix file:")
+        
+        self.file_dialog = pya.QFileDialog(self)
+        self.file_dialog.setFont(pya.QFont('Times', 10))
+        
+        self.select_file_button = pya.QPushButton("Select", self)
+        self.select_file_button.setFont(pya.QFont('Times', 15, pya.QFont.Bold))
+        self.select_file_button.clicked(self.select_file_button_clicked)
+        
+        self.load_button = pya.QPushButton("Load", self)
+        self.load_button.setFont(pya.QFont('Times', 21, pya.QFont.Bold))
+        self.load_button.clicked(self.load_button_clicked)
+        
+        self.matrix_info_label = pya.QLabel("Load images done!:")
+        self.matrix_info_label.setVisible(False)
+        
+        self.layout.addWidget(self.matrix_info_label, 5, 0)
+        
+        self.layout.addWidget(self.input_text, 0, 0)  
+             
+        self.layout.addWidget(self.select_file_button, 0, 1)
+
+        
+        self.layout.addWidget(self.load_button, 3, 0)
+        
+        self.setLayout(self.layout)
+        
+
+    def select_file_button_clicked(self, checked):
+        """ Event handler: button clicked """
+        self.matrix_info_label.setVisible(False)
+        matrix_path = pya.QFileDialog.getOpenFileName(self)
+        self.input_text.setText(matrix_path)
+        if matrix_path:
+            with open(matrix_path, "rb") as f:
+                content = f.read()
+
+    
+    def load_button_clicked(self, checked):
+        matrix_path = self.input_text.text
+        print("matrix path: ", matrix_path)
+        
+        main_window = pya.Application.instance().main_window()
+        
+        app = pya.Application.instance()
+        mw = app.main_window()
+        view = mw.current_view()
+        
+        with open(matrix_path,"r") as load_f:
+            load_dict = json.load(load_f)
+        
+        matrix_rule = re.compile(r'[(](.*?)[)]', re.S)
+        for i in range(len(load_dict["info"])):
+            path  = load_dict["info"][i]["file_path"]
+            matrix = load_dict["info"][i]["Trans_matrix"]
+            matrix = re.findall(matrix_rule, matrix)
+            m = [[],[],[]]
+            for i in range(len(matrix)):
+                matrix_elements = matrix[i].split(",")
+                for element in matrix_elements:
+                    m[i].append(float(element))
+            
+            add_images = pya.Image(path)
+            matrix = pya.Matrix3d(m[0][0],m[0][1],m[0][2],m[1][0],m[1][1],m[1][2],m[2][0],m[2][1],m[2][2])
+            add_images = add_images.transformed(matrix)
+        
+            view.insert_image(add_images)
+        self.matrix_info_label.setVisible(True)
+        print("Load images done!")
+
+
+dialog = ImageToLayout(pya.Application.instance().main_window())
+
+menu_handler = pya.Action()
+menu_handler.title = "Load Images with Matrix"
+menu_handler.on_triggered(dialog.show)
+
+def initialize():
+  main_window = pya.Application.instance().main_window()
+  menu = main_window.menu()
+  menu.insert_separator('tools_menu.end', 'loadmatrix')
+  menu.insert_item("tools_menu.end", "run_loadmatrix", menu_handler)
+
+initialize()</text>
+</klayout-macro>
